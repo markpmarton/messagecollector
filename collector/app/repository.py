@@ -54,9 +54,13 @@ class MessageRepository:
             return session.query(Message).filter_by(uuid=uuid).first() is not None
 
     def store_message(self, msg: Message):
-        with Session(self.engine) as session:
-            if self.message_exists(msg.uuid):
-                # dropping already stored message
-                return
-            session.add(msg)
-            session.commit()
+        try:
+            with Session(self.engine) as session:
+                if self.message_exists(msg.uuid):
+                    # dropping already stored message
+                    return
+                session.add(msg)
+                session.commit()
+            return True
+        except Exception:
+            return False
