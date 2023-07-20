@@ -119,3 +119,11 @@ It follows the JSON Schema of the message:
 - write comments to facilitate reading for reviewers where code can be unclear
 - use *git* and write well formed commit messages
 - use of *docker* is appreciated
+
+## Usage
+
+With docker-compose all the required containers will start.
+```bash
+docker-compose up --build -V
+```
+The tests can run after the container deploy by running run_tests.sh

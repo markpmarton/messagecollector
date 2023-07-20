@@ -7,7 +7,7 @@ Base = automap_base()
 
 engine = create_engine(DB_CONN_STR)
 
-Base.prepare(engine, reflect=True)
+Base.prepare(autoload_with=engine)
 
 User = Base.classes.app_user
 Message = Base.classes.message

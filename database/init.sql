@@ -3,7 +3,7 @@ CREATE TABLE app_user (
   uuid uuid NOT NULL DEFAULT gen_random_uuid(),
   customerId serial NOT NULL,
   name varchar(255) NOT NULL,
-  created_at timestamp NOT NULL,
+  created_at timestamp DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp NULL,
   PRIMARY KEY (uuid)
 );

@@ -11,6 +11,8 @@ services:
       - POSTGRES_DB=messagecollector
     ports:
       - "5432:5432"
+    networks:
+      - intra
     restart: always
   collector:
     build:
@@ -28,6 +30,8 @@ services:
       - database
     ports:
       - "8080:8080"
+    networks:
+      - intra
     restart: always
   statprovider:
     build:
@@ -43,7 +47,12 @@ services:
       - DB_PORT=5432
     depends_on:
       - database
+      - collector
     ports:
       - "8081:8081"
+    networks:
+      - intra
     restart: always
+networks:
+  intra:
 

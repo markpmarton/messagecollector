@@ -1,76 +1,34 @@
-import pytest
 from uuid import uuid4
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+import pytest
+import os
+import psycopg2
 
-from config import DB_CONN_STR
+from logger import Logger
 
-existing_user_id: str = None
-existing_type_id: str = None
 
-@pytest.fixture(autouse=True)
-def pre_post_actions():
-    from models import User, Message, Type
+@pytest.fixture(scope="session", autouse=True)
+def run_pre_post():
+    yield
 
-    try:
-        print(DB_CONN_STR)
-        engine = create_engine(DB_CONN_STR)
-        test_user = User(customerid=1, name="Test User")
-        test_type = Type(name="Test Type")
-
-        existing_user_id = test_user.uuid
-        existing_type_id = test_type.uuid
-
-        test_message = Message(
-            uuid=f"{uuid4()}",
-            app_user_id=test_user.uuid,
-            type_id=test_type.uuid,
-            amount="1.11"
-        )
-        with Session(engine) as session:
-            session.add_all([test_user, test_type, test_message])
-            session.commit()
-
-        yield
-
-        with Session(engine) as session:
-            session.delete(test_message)
-            session.delete(test_user)
-            session.delete(test_type)
-            session.commit()
-    except Exception as e:
-        print(str(e))
-
-def test_saving_message_with_good_input_and_existing_type_and_user():
-    from models import Message
-    from repository import MessageRepository
-    
-    msg_repository = MessageRepository()
-    message = Message(
-        uuid=f"{uuid4()}",
-        app_user_id=existing_user_id,
-        type_id=existing_type_id,
-        amount="0.12"
+    conn = psycopg2.connect(
+        host=os.environ["DB_CONTAINER_NAME"],
+        port=os.environ["DB_PORT"],
+        database=os.environ["DB_NAME"],
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
     )
-    assert msg_repository.store_message(message)
+    query = ""
+    cur = conn.cursor()
 
-def test_saving_message_with_good_input_and_missing_user_and_type():
-    from models import Message
-    from repository import MessageRepository
-    
-    msg_repository = MessageRepository()
-    message = Message(
-        uuid=f"{uuid4()}",
-        app_user_id=f"{uuid4()}",
-        type_id=f"{uuid4()}",
-        amount="0.12"
-    )
-    assert not msg_repository.store_message(message)
+    with open("/tools/clear_db.sql", "r") as reader:
+        query = reader.read()
+    cur.execute(query)
+    conn.commit()
 
-def test_api_collect_message_with_good_input_and_existing_type_and_user():
+
+def test_api_collect_message_with_good_input_existing_type_and_user():
     from fastapi.testclient import TestClient
     from main import app
-    from dto_models import CollectMessageDto
 
     client = TestClient(app)
     response = client.post(
@@ -79,17 +37,16 @@ def test_api_collect_message_with_good_input_and_existing_type_and_user():
             "uuid": f"{uuid4()}",
             "customerId": 1,
             "type": "Test Type",
-            "amount": "0.13"
-        }
+            "amount": "0.13",
+        },
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-def test_api_collect_message_with_good_input_and_existing_type_but_missing_user():
-    from models import User
+
+def test_api_collect_message_with_good_input_existing_type_but_missing_user():
     from fastapi.testclient import TestClient
     from main import app
-    from dto_models import CollectMessageDto
 
     client = TestClient(app)
     response = client.post(
@@ -98,23 +55,16 @@ def test_api_collect_message_with_good_input_and_existing_type_but_missing_user(
             "uuid": f"{uuid4()}",
             "customerId": 999,
             "type": "Test Type",
-            "amount": "0.13"
-        }
+            "amount": "0.13",
+        },
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-    with Session(create_engine(DB_CONN_STR)) as session:
-        user = session.query(User).filter_by(customerid=999).first()
-        session.delete(user)
-        session.commit()
-        
 
-def test_api_collect_message_with_good_input_and_existing_type_but_missing_user():
-    from models import Type
+def test_api_collect_message_with_good_input_existing_user_but_missing_type():
     from fastapi.testclient import TestClient
     from main import app
-    from dto_models import CollectMessageDto
 
     client = TestClient(app)
     response = client.post(
@@ -122,24 +72,17 @@ def test_api_collect_message_with_good_input_and_existing_type_but_missing_user(
         json={
             "uuid": f"{uuid4()}",
             "customerId": 1,
-            "type": "Non Existing Type",
-            "amount": "0.13"
-        }
+            "type": "Not Existing Type",
+            "amount": "0.13",
+        },
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-    with Session(create_engine(DB_CONN_STR)) as session:
-        act_type = session.query(Type).filter_by(name="Non Existing Type").first()
-        session.delete(act_type)
-        session.commit()
 
-
-def test_api_collect_message_with_good_input_and_existing_type_but_missing_user():
-    from models import Type, User
+def test_api_collect_message_with_good_input_missing_type_and_missing_user():
     from fastapi.testclient import TestClient
     from main import app
-    from dto_models import CollectMessageDto
 
     client = TestClient(app)
     response = client.post(
@@ -148,15 +91,76 @@ def test_api_collect_message_with_good_input_and_existing_type_but_missing_user(
             "uuid": f"{uuid4()}",
             "customerId": 999,
             "type": "Non Existing Type",
-            "amount": "0.13"
-        }
+            "amount": "0.13",
+        },
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-    with Session(create_engine(DB_CONN_STR)) as session:
-        user = session.query(User).filter_by(customerid=999).first()
-        act_type = session.query(Type).filter_by(name="Non Existing Type").first()
-        session.delete(act_type)
-        session.delete(user)
-        session.commit()
+
+def test_api_collect_message_with_missing_type_param():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/message/collect",
+        json={
+            "uuid": f"{uuid4()}",
+            "customerId": 999,
+            "amount": "0.13",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() != {"status": "ok"}
+
+
+def test_api_collect_message_with_missing_user_param():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/message/collect",
+        json={
+            "uuid": f"{uuid4()}",
+            "type": "Non Existing Type",
+            "amount": "0.13",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() != {"status": "ok"}
+
+
+def test_api_collect_message_with_missing_uuid_param():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/message/collect",
+        json={
+            "customerId": 999,
+            "type": "Non Existing Type",
+            "amount": "0.13",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() != {"status": "ok"}
+
+
+def test_api_collect_message_with_missing_amount_param():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/message/collect",
+        json={
+            "uuid": f"{uuid4()}",
+            "customerId": 999,
+            "type": "Non Existing Type",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() != {"status": "ok"}

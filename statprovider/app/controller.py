@@ -1,8 +1,8 @@
 from config import TIME_FORMAT, MIN_TIME
 
 from fastapi import APIRouter
-from datetime import datetime
 
+from logger import Logger
 from repository import MessageRepository
 
 router = APIRouter()
@@ -15,6 +15,16 @@ async def get_stats(
     from_time: str = MIN_TIME,
     to_time: str = "",
 ):
+    """
+    Statistic provider endpoint.
+
+    URL Parameters:
+        customerId: int = user Id to filter messages
+        msg_type: str = message type to filter to
+        from_time: str = setting the lower border of the time interval in format YYYY-MM-DDTHH:mm:ss
+        to_time: str = setting the upper border of the time interval in format YYYY-MM-DDTHH:mm:ss
+
+    """
     try:
         message_repository = MessageRepository()
         messages = message_repository.get_messages_by_user_and_type(
@@ -42,4 +52,5 @@ async def get_stats(
             }
         return {"status": "ok", "data": response_stats}
     except Exception as e:
+        Logger.error(str(e))
         return {"status": "failed", "error": str(e)}
