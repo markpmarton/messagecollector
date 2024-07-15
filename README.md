@@ -1,11 +1,3 @@
-# messagecollector
-Sample FastApi containers with Postgres Db
-
-
-*Please read instructions carefully*
-
-Use this file as part of the README.md and share with us your project when you complete it.
-
 ## Requirements
 
 You want to collect stats about the messages your system processes.
@@ -105,20 +97,6 @@ It follows the JSON Schema of the message:
 
 }
 ```
-
-### Instructions
-
-1. Write a REST API that will receive a single message and that updates a statistics table on a relational database.
-2. Write a REST API that will provide statistical information back to the reader.
-
-### Hints
-
-- use the *python* programming language, feel free to choose the best framework / libraries to get the task done
-- no need to have a fully-working deployed environment, just a local working solution
-- write tests
-- write comments to facilitate reading for reviewers where code can be unclear
-- use *git* and write well formed commit messages
-- use of *docker* is appreciated
 
 ## Usage
 
